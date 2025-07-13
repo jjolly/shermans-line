@@ -95,6 +95,14 @@ fn foot_of_perpendicular(p: egui::Pos2, a: egui::Pos2, b: egui::Pos2) -> egui::P
     egui::pos2(proj.0, proj.1)
 }
 
+fn extend_line(a: egui::Pos2, b: egui::Pos2, factor: f32) -> (egui::Pos2, egui::Pos2) {
+    let dx = b.x - a.x;
+    let dy = b.y - a.y;
+    let new_a = egui::pos2(a.x - dx * factor, a.y - dy * factor);
+    let new_b = egui::pos2(b.x + dx * factor, b.y + dy * factor);
+    (new_a, new_b)
+}
+
 struct TriangleApp {
     vertices: [egui::Pos2; 3],
     show_perpendiculars: bool,
@@ -102,6 +110,7 @@ struct TriangleApp {
     show_side_midpoints: bool,
     show_feet_of_altitudes: bool,
     show_ortho_vertex_midpoints: bool,
+    show_extensions: bool,
 }
 
 impl Default for TriangleApp {
@@ -116,6 +125,7 @@ impl Default for TriangleApp {
             show_side_midpoints: false,
             show_feet_of_altitudes: false,
             show_ortho_vertex_midpoints: false,
+            show_extensions: false,
         }
     }
 }
@@ -131,23 +141,20 @@ impl eframe::App for TriangleApp {
                 ui.checkbox(&mut self.show_side_midpoints, "Show side midpoints");
                 ui.checkbox(&mut self.show_feet_of_altitudes, "Show feet of altitudes");
                 ui.checkbox(&mut self.show_ortho_vertex_midpoints, "Show orthocenter-vertex midpoints");
+                ui.checkbox(&mut self.show_extensions, "Show extensions")
             });
             
+            let factor = 2.0; // Adjust for your window size
             let painter = ui.painter();
             for i in 0..3 {
                 let a = self.vertices[i];
                 let b = self.vertices[(i + 1) % 3];
                 painter.line_segment([a, b], egui::Stroke::new(2.0, egui::Color32::WHITE));
+                if self.show_extensions {
+                    let (ext1, ext2) = extend_line(a, b, factor);
+                    painter.line_segment([ext1, ext2], egui::Stroke::new(1.0, egui::Color32::DARK_GRAY));
+                }
             }
-
-            let [a, b, c] = self.vertices;
-            let (incenter, inradius) = incenter_and_inradius(a, b, c);
-            let (circumcenter, circumradius) = circumcenter_and_radius(a, b, c);
-            let (nine_point_center, nine_point_radius) = nine_point_circle(a, b, c);
-
-            painter.circle_stroke(incenter, inradius, egui::Stroke::new(2.0, egui::Color32::GREEN));
-            painter.circle_stroke(circumcenter, circumradius, egui::Stroke::new(2.0, egui::Color32::BLUE));
-            painter.circle_stroke(nine_point_center, nine_point_radius, egui::Stroke::new(2.0, egui::Color32::YELLOW));
 
             if self.show_perpendiculars {
                 let [a, b, c] = self.vertices;
@@ -157,6 +164,15 @@ impl eframe::App for TriangleApp {
                 painter.line_segment([a, foot_a], egui::Stroke::new(1.5, egui::Color32::LIGHT_GREEN));
                 painter.line_segment([b, foot_b], egui::Stroke::new(1.5, egui::Color32::LIGHT_GREEN));
                 painter.line_segment([c, foot_c], egui::Stroke::new(1.5, egui::Color32::LIGHT_GREEN));
+                if self.show_extensions {
+                    let ortho = orthocenter(a, b, c);
+                    let feet = [foot_a, foot_b, foot_c];
+                    let verts = [a, b, c];
+                    for i in 0..3 {
+                        let (ext1, ext2) = extend_line(verts[i], feet[i], factor);
+                        painter.line_segment([ext1, ext2], egui::Stroke::new(1.0, egui::Color32::DARK_GREEN));
+                    }
+                }
             }
 
             if self.show_ortho_segments {
@@ -197,6 +213,15 @@ impl eframe::App for TriangleApp {
                     painter.circle_filled(m, 5.0, egui::Color32::LIGHT_RED);
                 }
             }
+
+            let [a, b, c] = self.vertices;
+            let (incenter, inradius) = incenter_and_inradius(a, b, c);
+            let (circumcenter, circumradius) = circumcenter_and_radius(a, b, c);
+            let (nine_point_center, nine_point_radius) = nine_point_circle(a, b, c);
+
+            painter.circle_stroke(incenter, inradius, egui::Stroke::new(2.0, egui::Color32::GREEN));
+            painter.circle_stroke(circumcenter, circumradius, egui::Stroke::new(2.0, egui::Color32::BLUE));
+            painter.circle_stroke(nine_point_center, nine_point_radius, egui::Stroke::new(2.0, egui::Color32::YELLOW));
 
             for (i, v) in self.vertices.iter_mut().enumerate() {
                 let radius = 8.0;
