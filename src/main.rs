@@ -81,8 +81,27 @@ fn nine_point_circle(a: egui::Pos2, b: egui::Pos2, c: egui::Pos2) -> (egui::Pos2
     (center, radius)
 }
 
+fn midpoint(a: egui::Pos2, b: egui::Pos2) -> egui::Pos2 {
+    egui::pos2((a.x + b.x) / 2.0, (a.y + b.y) / 2.0)
+}
+
+fn foot_of_perpendicular(p: egui::Pos2, a: egui::Pos2, b: egui::Pos2) -> egui::Pos2 {
+    let ap = (p.x - a.x, p.y - a.y);
+    let ab = (b.x - a.x, b.y - a.y);
+    let ab_len2 = ab.0 * ab.0 + ab.1 * ab.1;
+    let dot = ap.0 * ab.0 + ap.1 * ab.1;
+    let t = dot / ab_len2;
+    let proj = (a.x + t * ab.0, a.y + t * ab.1);
+    egui::pos2(proj.0, proj.1)
+}
+
 struct TriangleApp {
     vertices: [egui::Pos2; 3],
+    show_perpendiculars: bool,
+    show_ortho_segments: bool,
+    show_side_midpoints: bool,
+    show_feet_of_altitudes: bool,
+    show_ortho_vertex_midpoints: bool,
 }
 
 impl Default for TriangleApp {
@@ -92,6 +111,11 @@ impl Default for TriangleApp {
                 egui::Pos2::new(200.0, 200.0),
                 egui::Pos2::new(400.0, 200.0),
                 egui::Pos2::new(300.0, 400.0)],
+            show_perpendiculars: false,
+            show_ortho_segments: false,
+            show_side_midpoints: false,
+            show_feet_of_altitudes: false,
+            show_ortho_vertex_midpoints: false,
         }
     }
 }
@@ -101,6 +125,14 @@ impl eframe::App for TriangleApp {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.heading("Sherman's Line Visualization");
 
+            ui.horizontal(|ui| {
+                ui.checkbox(&mut self.show_perpendiculars, "Show altitudes");
+                ui.checkbox(&mut self.show_ortho_segments, "Show orthocenter-vertex segments");
+                ui.checkbox(&mut self.show_side_midpoints, "Show side midpoints");
+                ui.checkbox(&mut self.show_feet_of_altitudes, "Show feet of altitudes");
+                ui.checkbox(&mut self.show_ortho_vertex_midpoints, "Show orthocenter-vertex midpoints");
+            });
+            
             let painter = ui.painter();
             for i in 0..3 {
                 let a = self.vertices[i];
@@ -116,6 +148,55 @@ impl eframe::App for TriangleApp {
             painter.circle_stroke(incenter, inradius, egui::Stroke::new(2.0, egui::Color32::GREEN));
             painter.circle_stroke(circumcenter, circumradius, egui::Stroke::new(2.0, egui::Color32::BLUE));
             painter.circle_stroke(nine_point_center, nine_point_radius, egui::Stroke::new(2.0, egui::Color32::YELLOW));
+
+            if self.show_perpendiculars {
+                let [a, b, c] = self.vertices;
+                let foot_a = foot_of_perpendicular(a, b, c);
+                let foot_b = foot_of_perpendicular(b, a, c);
+                let foot_c = foot_of_perpendicular(c, a, b);
+                painter.line_segment([a, foot_a], egui::Stroke::new(1.5, egui::Color32::LIGHT_GREEN));
+                painter.line_segment([b, foot_b], egui::Stroke::new(1.5, egui::Color32::LIGHT_GREEN));
+                painter.line_segment([c, foot_c], egui::Stroke::new(1.5, egui::Color32::LIGHT_GREEN));
+            }
+
+            if self.show_ortho_segments {
+                let [a, b, c] = self.vertices;
+                let ortho = orthocenter(a, b, c);
+                painter.line_segment([a, ortho], egui::Stroke::new(1.5, egui::Color32::LIGHT_BLUE));
+                painter.line_segment([b, ortho], egui::Stroke::new(1.5, egui::Color32::LIGHT_BLUE));
+                painter.line_segment([c, ortho], egui::Stroke::new(1.5, egui::Color32::LIGHT_BLUE));
+            }
+
+            if self.show_side_midpoints {
+                let [a, b, c] = self.vertices;
+                let m_ab = midpoint(a, b);
+                let m_bc = midpoint(b, c);
+                let m_ca = midpoint(c, a);
+                for m in [m_ab, m_bc, m_ca] {
+                    painter.circle_filled(m, 5.0, egui::Color32::GOLD);
+                }
+            }
+
+            if self.show_feet_of_altitudes {
+                let [a, b, c] = self.vertices;
+                let foot_a = foot_of_perpendicular(a, b, c);
+                let foot_b = foot_of_perpendicular(b, a, c);
+                let foot_c = foot_of_perpendicular(c, a, b);
+                for f in [foot_a, foot_b, foot_c] {
+                    painter.circle_filled(f, 5.0, egui::Color32::RED);
+                }
+            }
+
+            if self.show_ortho_vertex_midpoints {
+                let [a, b, c] = self.vertices;
+                let ortho = orthocenter(a, b, c);
+                let m_a = midpoint(a, ortho);
+                let m_b = midpoint(b, ortho);
+                let m_c = midpoint(c, ortho);
+                for m in [m_a, m_b, m_c] {
+                    painter.circle_filled(m, 5.0, egui::Color32::LIGHT_RED);
+                }
+            }
 
             for (i, v) in self.vertices.iter_mut().enumerate() {
                 let radius = 8.0;
