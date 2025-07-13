@@ -3,14 +3,20 @@
 ## Project Plan
 
 - [x] Set up Rust project and add dependencies (`eframe`, `egui`)
-- [ ] Create main application window using `eframe`
-- [ ] Implement triangle with draggable vertices
-- [ ] Compute and draw:
-    - [ ] Incircle
-    - [ ] Circumcircle
-    - [ ] Nine-point circle
+- [x] Create main application window using `eframe`
+- [x] Implement triangle with draggable vertices
+- [x] Compute and draw:
+    - [x] Incircle
+    - [x] Circumcircle
+    - [x] Nine-point circle
     - [ ] Sherman's line
 - [ ] Display linear equations for the circles/lines
+- [ ] Implement UI toggles for auxiliary constructions:
+    - [ ] Show altitudes (perpendiculars)
+    - [ ] Show ortho-center-vertex segments
+    - [ ] Show side midpoints
+    - [ ] Show feet of altitudes
+    - [ ] Show midpoints of orthocenter-vertex segments
 - [ ] (Optional) Add save/load functionality for triangle state
 - [ ] (Optional) Polish UI, add controls, help, etc.
 
